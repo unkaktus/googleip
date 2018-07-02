@@ -15,25 +15,23 @@ import (
 	"regexp"
 )
 
-// GetIP determines publicly routable IP using Google services and
-// front as Server Name Indication.
-func GetIP(t http.RoundTripper, front string) (*net.IP, error) {
-	return getIPYouTubeVideo(t, front, "")
+// GetIP determines publicly routable IP using Google services.
+func GetIP(t http.RoundTripper) (*net.IP, error) {
+	return getIPYouTubeVideo(t, "")
 }
 
 // Fetch a YouTube video page and extract IP from it.
-func getIPYouTubeVideo(t http.RoundTripper, front, videoID string) (*net.IP, error) {
+func getIPYouTubeVideo(t http.RoundTripper, videoID string) (*net.IP, error) {
 	if videoID == "" {
 		// Use a video that will higly unlikely be ever removed ("Me at the zoo").
 		videoID = "jNQXAC9IVRw"
 	}
-	u := "https://" + front + "/watch?v=" + videoID
+	u := "https://www.youtube.com/watch?v=" + videoID
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Host = "www.youtube.com"
 	resp, err := t.RoundTrip(req)
 	if err != nil {
 		return nil, err
