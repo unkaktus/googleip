@@ -17,7 +17,7 @@ import (
 
 // GetIP determines publicly routable IP using Google services.
 func GetIP(t http.RoundTripper) (*net.IP, error) {
-	return getIPYouTubeVideo(t, "")
+	return getIPSorryPage(t)
 }
 
 // Fetch a YouTube video page and extract IP from it.
@@ -37,7 +37,7 @@ func getIPYouTubeVideo(t http.RoundTripper, videoID string) (*net.IP, error) {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("non-OK response")
+		return nil, errors.New("unexpected status code")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -45,6 +45,44 @@ func getIPYouTubeVideo(t http.RoundTripper, videoID string) (*net.IP, error) {
 		return nil, err
 	}
 	re, err := regexp.Compile(`Find(\%26ip\%3D[\d\.]+)|(\d{1,3}\.){3}\d{1,3}`)
+	if err != nil {
+		return nil, err
+	}
+	ips := re.FindAll(body, 10)
+	var ipa net.IP
+	for _, ip := range ips {
+		ipa = net.ParseIP(string(ip))
+		if ipa != nil {
+			break
+		}
+	}
+	if ipa == nil {
+		return nil, errors.New("no valid IP found")
+	}
+	return &ipa, nil
+}
+
+// Go to Google Sorry Page and grab IP from there.
+func getIPSorryPage(t http.RoundTripper) (*net.IP, error) {
+	u := "https://www.google.com/sorry/index"
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := t.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		return nil, errors.New("unexpected status code")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	re, err := regexp.Compile(`Find(IP\saddress:\s[\d\.]+)|(\d{1,3}\.){3}\d{1,3}`)
 	if err != nil {
 		return nil, err
 	}
