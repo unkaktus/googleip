@@ -74,7 +74,9 @@ func getIPSorryPage(t http.RoundTripper) (*net.IP, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusServiceUnavailable {
+	switch resp.StatusCode {
+	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+	default:
 		return nil, errors.New("unexpected status code")
 	}
 
